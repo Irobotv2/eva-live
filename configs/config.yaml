@@ -1,0 +1,248 @@
+# Eva Live Configuration
+
+# Application Settings
+app:
+  name: "Eva Live"
+  version: "1.0.0"
+  environment: "development"  # development, staging, production
+  debug: true
+  host: "0.0.0.0"
+  port: 8000
+
+# API Configuration
+api:
+  base_url: "https://api.eva-live.com/v1"
+  websocket_url: "wss://ws.eva-live.com/v1"
+  rate_limits:
+    default: 1000  # requests per minute
+    authentication: 10
+    session_management: 100
+    content_upload: 10
+    real_time_interaction: 1000
+    monitoring: 500
+
+# Database Configuration
+database:
+  postgresql:
+    host: "localhost"
+    port: 5432
+    database: "eva_live"
+    username: "eva_user"
+    password: "${POSTGRES_PASSWORD}"
+    pool_size: 20
+    max_overflow: 0
+    pool_timeout: 30
+    pool_recycle: 3600
+  
+  redis:
+    host: "localhost"
+    port: 6379
+    database: 0
+    password: "${REDIS_PASSWORD}"
+    max_connections: 100
+    socket_timeout: 5
+    
+  vector_db:
+    provider: "pinecone"  # pinecone, weaviate
+    pinecone:
+      api_key: "${PINECONE_API_KEY}"
+      environment: "us-west1-gcp"
+      index_name: "eva-live-knowledge"
+      dimension: 1536
+      metric: "cosine"
+    weaviate:
+      url: "http://localhost:8080"
+      api_key: "${WEAVIATE_API_KEY}"
+
+# AI/ML Service Configuration
+ai_services:
+  openai:
+    api_key: "${OPENAI_API_KEY}"
+    model: "gpt-4-turbo-preview"
+    embedding_model: "text-embedding-ada-002"
+    max_tokens: 4096
+    temperature: 0.7
+    timeout: 30
+  
+  speech_recognition:
+    primary:
+      provider: "google"
+      api_key: "${GOOGLE_CLOUD_API_KEY}"
+      language_code: "en-US"
+      sample_rate: 16000
+      encoding: "LINEAR16"
+    fallback:
+      provider: "whisper"
+      model: "base"
+      language: "en"
+  
+  text_to_speech:
+    primary:
+      provider: "elevenlabs"
+      api_key: "${ELEVENLABS_API_KEY}"
+      voice_id: "21m00Tcm4TlvDq8ikWAM"
+      model_id: "eleven_monolingual_v1"
+      voice_settings:
+        stability: 0.75
+        similarity_boost: 0.75
+    fallback:
+      provider: "google"
+      api_key: "${GOOGLE_CLOUD_API_KEY}"
+      voice:
+        language_code: "en-US"
+        name: "en-US-Wavenet-F"
+        ssml_gender: "FEMALE"
+
+# Avatar Configuration
+avatar:
+  default_config:
+    appearance:
+      skin_tone: "medium"
+      hair_color: "brown"
+      hair_style: "professional_short"
+      eye_color: "hazel"
+      clothing:
+        style: "business_casual"
+        color_scheme: "blue_gray"
+    personality:
+      enthusiasm_level: 0.8
+      formality_level: 0.7
+      gesture_frequency: 0.6
+      expression_range: "full"
+    voice_settings:
+      pitch: 0.0
+      speed: 1.0
+      emotion_responsiveness: 0.8
+  
+  rendering:
+    engine: "unreal_engine"
+    quality: "high"  # low, medium, high, ultra
+    frame_rate: 30
+    resolution: "1080p"  # 720p, 1080p, 4k
+    gpu_acceleration: true
+
+# Performance Targets
+performance:
+  latency_targets:
+    speech_recognition: 100  # milliseconds
+    ai_processing: 200
+    voice_synthesis: 150
+    avatar_rendering: 100
+    total_pipeline: 500
+  
+  quality_targets:
+    speech_recognition_accuracy: 0.95
+    ai_confidence_score: 0.85
+    voice_naturalness: 0.90
+    visual_quality: 0.90
+    lip_sync_accuracy: 0.95
+
+# Platform Integration
+integrations:
+  zoom:
+    api_key: "${ZOOM_API_KEY}"
+    api_secret: "${ZOOM_API_SECRET}"
+    webhook_secret: "${ZOOM_WEBHOOK_SECRET}"
+  
+  teams:
+    tenant_id: "${TEAMS_TENANT_ID}"
+    client_id: "${TEAMS_CLIENT_ID}"
+    client_secret: "${TEAMS_CLIENT_SECRET}"
+  
+  google_meet:
+    client_id: "${GOOGLE_CLIENT_ID}"
+    client_secret: "${GOOGLE_CLIENT_SECRET}"
+
+# Virtual Camera/Microphone
+virtual_devices:
+  camera:
+    name: "Eva Live Camera"
+    formats: ["H264", "VP8", "VP9"]
+    resolutions: ["720p", "1080p", "4K"]
+    frame_rates: [30, 60]
+  
+  microphone:
+    name: "Eva Live Microphone"
+    sample_rate: 48000
+    channels: 2
+    bit_depth: 16
+
+# Monitoring and Alerting
+monitoring:
+  metrics:
+    collection_interval: 10  # seconds
+    retention_period: 90  # days
+  
+  alerts:
+    high_latency_threshold: 500  # milliseconds
+    low_confidence_threshold: 0.7
+    error_rate_threshold: 0.05
+    resource_usage_threshold: 0.85
+  
+  logging:
+    level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    format: "json"
+    max_file_size: "100MB"
+    backup_count: 5
+
+# Security Configuration
+security:
+  jwt:
+    secret_key: "${JWT_SECRET_KEY}"
+    algorithm: "HS256"
+    access_token_expire_minutes: 30
+    refresh_token_expire_days: 7
+  
+  encryption:
+    algorithm: "AES-256-GCM"
+    key: "${ENCRYPTION_KEY}"
+  
+  cors:
+    allowed_origins: ["http://localhost:3000", "https://app.eva-live.com"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allowed_headers: ["*"]
+
+# Content Processing
+content:
+  supported_formats:
+    presentations: [".pptx", ".ppt", ".pdf", ".odp"]
+    documents: [".pdf", ".docx", ".txt", ".md"]
+    images: [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
+    videos: [".mp4", ".avi", ".mov", ".wmv"]
+  
+  processing:
+    max_file_size: "500MB"
+    chunk_size: 1000  # characters for text chunking
+    overlap: 200  # character overlap between chunks
+    image_resize_max: 1920  # max width/height for images
+
+# Session Management
+session:
+  default_duration: 180  # minutes
+  max_concurrent_per_user: 5
+  cleanup_interval: 300  # seconds
+  heartbeat_interval: 30  # seconds
+  
+  fallback:
+    enable_graceful_degradation: true
+    enable_human_takeover: true
+    emergency_responses:
+      - "I'm experiencing a technical difficulty. Please give me a moment."
+      - "Let me get back to you on that question."
+      - "I need to check with my human colleague on this."
+
+# Development Settings
+development:
+  mock_services: false
+  debug_avatar_rendering: false
+  record_conversations: true
+  performance_profiling: true
+  
+# Feature Flags
+features:
+  enable_screen_sharing: true
+  enable_multi_language: true
+  enable_custom_avatars: true
+  enable_real_time_analytics: true
+  enable_operator_intervention: true
+  enable_conversation_memory: true

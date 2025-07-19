@@ -1,0 +1,172 @@
+# Eva Live Production Docker Compose Configuration
+
+version: '3.8'
+
+services:
+  # Eva Live API Server
+  eva-live-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: eva-live-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+    env_file:
+      - ../.env
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ../logs:/app/logs
+      - ../uploads:/app/uploads
+      - ../cache:/app/cache
+    networks:
+      - eva-live-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: eva-live-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eva_live
+      POSTGRES_USER: eva_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - eva-live-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U eva_user -d eva_live" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: eva-live-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - eva-live-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # NGINX Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: eva-live-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+      - ../static:/var/www/static
+    depends_on:
+      - eva-live-api
+    networks:
+      - eva-live-network
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: eva-live-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - eva-live-network
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: eva-live-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - eva-live-network
+
+  # Vector Database - Weaviate (alternative to Pinecone)
+  weaviate:
+    image: semitechnologies/weaviate:latest
+    container_name: eva-live-weaviate
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'false'
+      AUTHENTICATION_APIKEY_ENABLED: 'true'
+      AUTHENTICATION_APIKEY_ALLOWED_KEYS: '${WEAVIATE_API_KEY}'
+      AUTHORIZATION_ADMINLIST_ENABLED: 'true'
+      AUTHORIZATION_ADMINLIST_USERS: 'admin'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ENABLE_MODULES: 'text2vec-openai,generative-openai'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - eva-live-network
+    profiles:
+      - weaviate
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  weaviate_data:
+    driver: local
+
+# Network configuration
+networks:
+  eva-live-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
